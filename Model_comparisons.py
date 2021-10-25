@@ -56,12 +56,9 @@ data_augmentation = Sequential([
                                 RandomFlip("horizontal_and_vertical"),
                                 RandomRotation((0,0.5), fill_mode='constant')
 ])
-def comparisons_model(hp):
-    img_size=224
-    weights=None
+def comparisons_model(img_size, weigths=None):
     """
     Create comparisons network which reproduce the choice in an images duel.
-
     :param img_size: size of input images during training
     :type img_size: tuple(int)
     :param weights: path to the weights use for initialization
@@ -69,23 +66,10 @@ def comparisons_model(hp):
     :return: ranking comparisons model
     :rtype: keras.Model
     """
-    
-    #vgg_feature_extractor = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
-    
-    #vgg_include_until='block4_pool'
-    #feature_extractor = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
-    #feature_extractor = Model(inputs=vgg_feature_extractor.input, outputs=feature_extractor.get_layer(vgg_include_until).output)
-    
     vgg_feature_extractor = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
 
     # Fine tuning by freezing the last 4 convolutional layers of VGG19 (last block)
-    for layer in vgg_feature_extractor.layers[:-hp.Int(
-        'layers_frozen',
-        min_value=0,
-        max_value=22,
-        step=2,
-        default=4
-    )]:
+    for layer in vgg_feature_extractor.layers[:-4]:
         layer.trainable = False
 
     # Definition of the 2 inputs
@@ -123,15 +107,14 @@ def comparisons_model(hp):
     x = Dense(2, activation='softmax', name="Final_dense")(x)
 
     classification_model = Model([img_a, img_b], x)
-    #if weigths is not None:
-    #    classification_model.load_weights(weigths)
+    if weigths:
+        classification_model.load_weights(weigths)
     #sgd = SGD(learning_rate=1e-5, decay=1e-6, momentum=0.3, nesterov=True)
-    classification_model.compile(loss='categorical_crossentropy', 
-                                 optimizer=Adam(hp.Float("learning_rate", 1e-6, 1e-4, sampling="log")), 
-                                 metrics=['accuracy'])
+    adam = Adam(learning_rate=1e-5)
+    classification_model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
     return classification_model
 
-def ranking_model(img_size, weights=None):
+def ranking_model(img_size, vgg_feature_extractor=None, weights=None):
     img_size=224
     weights=None
     """
@@ -150,8 +133,8 @@ def ranking_model(img_size, weights=None):
     #vgg_include_until='block4_pool'
     #feature_extractor = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
     #feature_extractor = Model(inputs=vgg_feature_extractor.input, outputs=feature_extractor.get_layer(vgg_include_until).output)
-    
-    vgg_feature_extractor = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
+    if vgg_feature_extractor is None:
+        vgg_feature_extractor = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
 
     # Fine tuning by freezing the last 4 convolutional layers of VGG19 (last block)
     #for layer in vgg_feature_extractor.layers[:-hp.Int(
