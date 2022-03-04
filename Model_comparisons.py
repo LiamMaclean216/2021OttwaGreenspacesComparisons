@@ -114,7 +114,7 @@ def comparisons_model(img_size, weigths=None):
     classification_model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
     return classification_model
 
-def ranking_model(img_size, vgg_feature_extractor=None, weights=None):
+def ranking_model(img_size, vgg_feature_extractor=None, weights=None, dense_size = 1024):
     img_size=224
     weights=None
     """
@@ -135,7 +135,8 @@ def ranking_model(img_size, vgg_feature_extractor=None, weights=None):
     #feature_extractor = Model(inputs=vgg_feature_extractor.input, outputs=feature_extractor.get_layer(vgg_include_until).output)
     if vgg_feature_extractor is None:
         vgg_feature_extractor = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
-
+    
+    
     # Fine tuning by freezing the last 4 convolutional layers of VGG19 (last block)
     #for layer in vgg_feature_extractor.layers[:-hp.Int(
     #    'layers_frozen',
@@ -163,12 +164,12 @@ def ranking_model(img_size, vgg_feature_extractor=None, weights=None):
     
     def ranking_layers(x, name):
         x = Flatten()(x)
-        x = Dense(4096, name="Dense_1_{}".format(name))(x)
+        x = Dense(dense_size, name="Dense_1_{}".format(name))(x)
         x = BatchNormalization()(x)
         x = Activation('relu', name='Activation_1_{}'.format(name))(x)
         x = Dropout(0.5, name="Drop_1_{}".format(name))(x)
         
-        x = Dense(4096, name="Dense_2_{}".format(name))(x)
+        x = Dense(dense_size, name="Dense_2_{}".format(name))(x)
         x = BatchNormalization()(x)
         x = Activation('relu', name='Activation_2_{}'.format(name))(x)
         x = Dropout(0.5, name="Drop_2_{}".format(name))(x)
